@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pickapply – Dashboard de Insights</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #5B4FE9;
+    --primary-light: #EEF0FF;
+    --accent: #FF6B6B;
+    --accent2: #FFB347;
+    --accent3: #4ECDC4;
+    --accent4: #45B7D1;
+    --dark: #1A1A2E;
+    --mid: #2D2D44;
+    --text: #2C2C54;
+    --muted: #8888AA;
+    --bg: #F5F6FF;
+    --white: #FFFFFF;
+    --card-shadow: 0 4px 20px rgba(91,79,233,0.10);
+    --green: #22C55E;
+    --red: #EF4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--dark) 0%, var(--mid) 100%);
+    color: white;
+    padding: 28px 36px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.5px; }
+  .header h1 span { color: #A89FF5; }
+  .header .subtitle { font-size: 0.85rem; color: #B0B0C8; margin-top: 4px; }
+  .header .date-badge {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    color: #D0D0F0;
+  }
+
+  /* LAYOUT */
+  .main { padding: 28px 36px; max-width: 1400px; margin: 0 auto; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin: 32px 0 14px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .kpi-card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 22px 20px;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid var(--primary);
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card.green { border-left-color: var(--green); }
+  .kpi-card.orange { border-left-color: var(--accent2); }
+  .kpi-card.teal { border-left-color: var(--accent3); }
+  .kpi-card.red { border-left-color: var(--accent); }
+  .kpi-card .label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-card .value { font-size: 2.2rem; font-weight: 800; margin: 6px 0 4px; color: var(--dark); line-height: 1; }
+  .kpi-card .sub { font-size: 0.78rem; color: var(--muted); }
+  .kpi-card .icon {
+    position: absolute;
+    right: 16px; top: 16px;
+    font-size: 2rem;
+    opacity: 0.12;
+  }
+
+  /* INSIGHT ALERT */
+  .insight-box {
+    background: var(--primary-light);
+    border: 1.5px solid #C5C0F5;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 14px 0 0;
+    font-size: 0.84rem;
+    color: var(--primary);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+  .insight-box .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+  .insight-box strong { color: var(--dark); }
+
+  /* GRID CARDS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-3-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+  .card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 22px 20px;
+    box-shadow: var(--card-shadow);
+  }
+  .card h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h3 .badge {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { max-height: 240px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { background: var(--bg); color: var(--muted); font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 10px; text-align: left; }
+  td { padding: 8px 10px; border-bottom: 1px solid #F0F0FA; color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #FAFAFF; }
+  .pill {
+    display: inline-block;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .pill.gold { background: #FFF3CD; color: #B8860B; }
+  .pill.std { background: #E8F5E9; color: #2E7D32; }
+  .pill.active { background: #E8F5E9; color: #2E7D32; }
+  .pill.closed { background: #F3F4F6; color: #6B7280; }
+  .pill.pending { background: #FFF3CD; color: #B8860B; }
+  .pill.noap { background: #FFE4E4; color: #B91C1C; }
+
+  /* BAR INLINE */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.82rem; }
+  .bar-row .label { width: 200px; flex-shrink: 0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-row .bar-track { flex: 1; background: var(--bg); border-radius: 6px; height: 10px; }
+  .bar-row .bar-fill { height: 10px; border-radius: 6px; background: var(--primary); }
+  .bar-row .count { width: 60px; text-align: right; font-weight: 700; color: var(--dark); flex-shrink: 0; }
+
+  /* PLAN COMPARE */
+  .plan-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .plan-box { border-radius: 12px; padding: 18px; }
+  .plan-box.gold { background: linear-gradient(135deg, #FFF8E1, #FFF3CD); border: 1.5px solid #FFD54F; }
+  .plan-box.std { background: linear-gradient(135deg, #F0FFF4, #E8F5E9); border: 1.5px solid #81C784; }
+  .plan-box .plan-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .plan-box.gold .plan-label { color: #B8860B; }
+  .plan-box.std .plan-label { color: #2E7D32; }
+  .plan-box .stat { margin: 8px 0; }
+  .plan-box .stat .num { font-size: 1.5rem; font-weight: 800; color: var(--dark); }
+  .plan-box .stat .desc { font-size: 0.75rem; color: var(--muted); }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 20px;
+  }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--bg);
+    color: var(--muted);
+    border: none;
+    transition: all 0.2s;
+  }
+  .tab.active { background: var(--primary); color: white; }
+
+  @media (max-width: 1100px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-3-1 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 700px) {
+    .main { padding: 16px; }
+    .grid-2, .grid-3, .kpi-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Pickapply <span>Insights</span></h1>
+    <div class="subtitle">Análisis cruzado de usuarios, publicaciones e instituciones</div>
+  </div>
+  <div class="date-badge">📅 Datos al 19 de mayo de 2026</div>
+</div>
+
+<div class="main">
+
+  <!-- KPIs PRINCIPALES -->
+  <div class="section-title">Métricas globales de la plataforma</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="icon">👤</div>
+      <div class="label">Usuarios registrados</div>
+      <div class="value">26.813</div>
+      <div class="sub">Docentes en la plataforma</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="icon">📋</div>
+      <div class="label">Postulaciones totales</div>
+      <div class="value">64.067</div>
+      <div class="sub">+ 43.296 espontáneas</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="icon">🏫</div>
+      <div class="label">Instituciones</div>
+      <div class="value">500</div>
+      <div class="sub">49 Gold · 451 Standard</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="icon">📢</div>
+      <div class="label">Publicaciones</div>
+      <div class="value">1.633</div>
+      <div class="sub">64 activas hoy · Prom. 39 post/pub</div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <span class="icon">💡</span>
+    <span><strong>Dato clave:</strong> El 47.5% de los usuarios nunca se postuló — hay un gran margen de activación. Solo el 0.24% (64 usuarios) tiene más de 50 postulaciones y representa un segmento muy comprometido. Febrero 2026 fue el mes pico con <strong>10.287 postulaciones</strong> y 160 publicaciones.</span>
+  </div>
+
+  <!-- USUARIOS -->
+  <div class="section-title">Comportamiento de usuarios</div>
+  <div class="grid-2">
+
+    <div class="card">
+      <h3>🎯 Segmentación por nivel de actividad</h3>
+      <div class="chart-wrap">
+        <canvas id="chartSegUsers"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📈 Nuevos registros por mes</h3>
+      <div class="chart-wrap">
+        <canvas id="chartRegMes"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <h3>🏆 Top 10 usuarios más activos <span class="badge">por postulaciones</span></h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Nombre</th><th>Postulaciones</th><th>Espontáneas</th><th>% espontáneas</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Carolina Mulé</td><td><strong>383</strong></td><td>34</td><td>8.9%</td></tr>
+        <tr><td>2</td><td>Natalia Danieli</td><td><strong>324</strong></td><td>20</td><td>6.2%</td></tr>
+        <tr><td>3</td><td>Maria Luciana Aspiro</td><td><strong>208</strong></td><td>95</td><td>45.7%</td></tr>
+        <tr><td>4</td><td>Soledad Mennutto</td><td><strong>130</strong></td><td>68</td><td>52.3%</td></tr>
+        <tr><td>5</td><td>Veronica Startschewoi</td><td><strong>127</strong></td><td>63</td><td>49.6%</td></tr>
+        <tr><td>6</td><td>Flavia Amarilla</td><td><strong>121</strong></td><td>1</td><td>0.8%</td></tr>
+        <tr><td>7</td><td>Teodoro Bertotto</td><td><strong>103</strong></td><td>13</td><td>12.6%</td></tr>
+        <tr><td>8</td><td>Josefina Zucchini</td><td><strong>99</strong></td><td>88</td><td>88.9%</td></tr>
+        <tr><td>9</td><td>Desiree Chamarez</td><td><strong>94</strong></td><td>14</td><td>14.9%</td></tr>
+        <tr><td>10</td><td>Roberto Lucarini</td><td><strong>92</strong></td><td>7</td><td>7.6%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PUBLICACIONES -->
+  <div class="section-title">Análisis de publicaciones</div>
+  <div class="grid-2">
+
+    <div class="card">
+      <h3>📅 Publicaciones y postulaciones por mes</h3>
+      <div class="chart-wrap">
+        <canvas id="chartPubMes"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📊 Estado de publicaciones</h3>
+      <div class="chart-wrap">
+        <canvas id="chartEstado"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-title">Roles más demandados</div>
+  <div class="grid-2">
+
+    <div class="card">
+      <h3>📝 Top puestos publicados <span class="badge">por frecuencia</span></h3>
+      <div id="barRoles">
+        <div class="bar-row"><span class="label">Maestra de grado</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="count">29</span></div>
+        <div class="bar-row"><span class="label">English Teacher</span><div class="bar-track"><div class="bar-fill" style="width:83%"></div></div><span class="count">24</span></div>
+        <div class="bar-row"><span class="label">Profesor/a de Inglés</span><div class="bar-track"><div class="bar-fill" style="width:69%"></div></div><span class="count">20</span></div>
+        <div class="bar-row"><span class="label">Primary English Teacher</span><div class="bar-track"><div class="bar-fill" style="width:66%"></div></div><span class="count">19</span></div>
+        <div class="bar-row"><span class="label">Docente Nivel Primario</span><div class="bar-track"><div class="bar-fill" style="width:48%"></div></div><span class="count">14</span></div>
+        <div class="bar-row"><span class="label">Docente de Inglés</span><div class="bar-track"><div class="bar-fill" style="width:45%"></div></div><span class="count">13</span></div>
+        <div class="bar-row"><span class="label">Profesor/a de Matemática</span><div class="bar-track"><div class="bar-fill" style="width:31%"></div></div><span class="count">9</span></div>
+        <div class="bar-row"><span class="label">Kinder Bilingual Teacher</span><div class="bar-track"><div class="bar-fill" style="width:31%"></div></div><span class="count">9</span></div>
+        <div class="bar-row"><span class="label">Profesor/a de Música</span><div class="bar-track"><div class="bar-fill" style="width:31%"></div></div><span class="count">9</span></div>
+        <div class="bar-row"><span class="label">Búsqueda docente</span><div class="bar-track"><div class="bar-fill" style="width:21%"></div></div><span class="count">6</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🔥 Categorías por postulaciones totales <span class="badge">demanda real</span></h3>
+      <div class="chart-wrap">
+        <canvas id="chartCats"></canvas>
+      </div>
+      <div class="insight-box" style="margin-top:12px; font-size:0.78rem;">
+        <span class="icon">⚡</span>
+        <span>El rol <strong>Preceptor/a</strong> tiene solo 29 publicaciones pero genera <strong>237 postulaciones promedio</strong> — el más alto de la plataforma.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOP PUBS -->
+  <div class="card" style="margin-top:20px;">
+    <h3>🏅 Top 10 publicaciones con más postulaciones</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Institución</th><th>Puesto</th><th>Estado</th><th>Postulaciones</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>ROB Consultora</td><td>Preceptor/a</td><td><span class="pill closed">Finalizada</span></td><td><strong>947</strong></td></tr>
+        <tr><td>2</td><td>Oakhill School Pilar</td><td>Recepcionista</td><td><span class="pill closed">Finalizada</span></td><td><strong>583</strong></td></tr>
+        <tr><td>3</td><td>Escuela Modelo D.F. Sarmiento</td><td>PRECEPTOR</td><td><span class="pill active">Activa</span></td><td><strong>574</strong></td></tr>
+        <tr><td>4</td><td>Cardenal Newman</td><td>Preceptor/a</td><td><span class="pill pending">Fin. pendiente</span></td><td><strong>522</strong></td></tr>
+        <tr><td>5</td><td>Instituto San Judas Tadeo</td><td>Preceptora Nivel Medio</td><td><span class="pill closed">Finalizada</span></td><td><strong>511</strong></td></tr>
+        <tr><td>6</td><td>Escuela Modelo D.F. Sarmiento</td><td>Preceptor</td><td><span class="pill closed">Finalizada</span></td><td><strong>480</strong></td></tr>
+        <tr><td>7</td><td>Colegio Belgrano Day School</td><td>Equipo de Acción Social</td><td><span class="pill pending">Fin. pendiente</span></td><td><strong>455</strong></td></tr>
+        <tr><td>8</td><td>Colegio Nuevo de Las Lomas</td><td>Preceptor/a turno tarde</td><td><span class="pill pending">Fin. pendiente</span></td><td><strong>418</strong></td></tr>
+        <tr><td>9</td><td>Instituto Santísimo Sacramento</td><td>Preceptor/a</td><td><span class="pill closed">Finalizada</span></td><td><strong>404</strong></td></tr>
+        <tr><td>10</td><td>C. Cardenal Pironio</td><td>Preceptor/a Secundario</td><td><span class="pill closed">Finalizada</span></td><td><strong>399</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- INSTITUCIONES -->
+  <div class="section-title">Instituciones</div>
+  <div class="grid-2">
+
+    <div class="card">
+      <h3>🥇 Gold vs Standard — comparativa</h3>
+      <div class="plan-compare">
+        <div class="plan-box gold">
+          <div class="plan-label">⭐ Gold (49 instituciones — 9.8%)</div>
+          <div class="stat"><div class="num">13.7</div><div class="desc">publicaciones promedio</div></div>
+          <div class="stat"><div class="num">937</div><div class="desc">postulantes promedio</div></div>
+          <div class="stat"><div class="num">17</div><div class="desc">con publicaciones activas hoy</div></div>
+          <div class="stat"><div class="num">3</div><div class="desc">sin ninguna publicación</div></div>
+        </div>
+        <div class="plan-box std">
+          <div class="plan-label">🟢 Standard (451 — 90.2%)</div>
+          <div class="stat"><div class="num">2.1</div><div class="desc">publicaciones promedio</div></div>
+          <div class="stat"><div class="num">136</div><div class="desc">postulantes promedio</div></div>
+          <div class="stat"><div class="num">28</div><div class="desc">con publicaciones activas hoy</div></div>
+          <div class="stat"><div class="num">153</div><div class="desc">sin ninguna publicación</div></div>
+        </div>
+      </div>
+      <div class="insight-box" style="margin-top:14px; font-size:0.78rem;">
+        <span class="icon">📌</span>
+        <span>Las instituciones Gold tienen <strong>6.5x más publicaciones</strong> y <strong>6.9x más postulantes</strong> que las Standard. El <strong>34% de las instituciones Standard</strong> nunca publicó nada.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🗺 Distribución geográfica <span class="badge">500 instituciones</span></h3>
+      <div class="chart-wrap">
+        <canvas id="chartGeo"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <h3>🏢 Top 15 instituciones por postulaciones totales recibidas</h3>
+    <table>
+      <thead>
+        <tr><th>Institución</th><th>Publicaciones</th><th>Postulaciones</th><th>Promedio/pub</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>ROB Consultora</td><td>54</td><td><strong>5.145</strong></td><td>95.3</td></tr>
+        <tr><td>Colegio Cardenal Pironio</td><td>61</td><td><strong>3.017</strong></td><td>49.5</td></tr>
+        <tr><td>Childrens School - Boston College</td><td>44</td><td><strong>2.550</strong></td><td>58.0</td></tr>
+        <tr><td>Escuela Modelo D.F. Sarmiento</td><td>15</td><td><strong>1.790</strong></td><td>119.3</td></tr>
+        <tr><td>Colegio Nuevo de Las Lomas</td><td>18</td><td><strong>1.374</strong></td><td>76.3</td></tr>
+        <tr><td>Oakhill School Pilar</td><td>21</td><td><strong>1.219</strong></td><td>58.0</td></tr>
+        <tr><td>St. Gregory's School (Palermo)</td><td>15</td><td><strong>1.208</strong></td><td>80.5</td></tr>
+        <tr><td>Colegio Belgrano Day School</td><td>16</td><td><strong>1.146</strong></td><td>71.6</td></tr>
+        <tr><td>Instituto San Martín de Tours</td><td>11</td><td><strong>1.124</strong></td><td>102.2</td></tr>
+        <tr><td>Instituto Ntra. Señora de las Nieves</td><td>19</td><td><strong>1.061</strong></td><td>55.8</td></tr>
+        <tr><td>Instituto San Cristóbal</td><td>19</td><td><strong>978</strong></td><td>51.5</td></tr>
+        <tr><td>Colegio San Martín de Tours</td><td>30</td><td><strong>973</strong></td><td>32.4</td></tr>
+        <tr><td>St. Catherine's Moorlands</td><td>15</td><td><strong>938</strong></td><td>62.5</td></tr>
+        <tr><td>La Asunción de la Virgen</td><td>26</td><td><strong>937</strong></td><td>36.0</td></tr>
+        <tr><td>Instituto Divino Rostro</td><td>16</td><td><strong>868</strong></td><td>54.2</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- OPORTUNIDADES -->
+  <div class="section-title">Oportunidades detectadas</div>
+  <div class="grid-3">
+
+    <div class="card">
+      <h3>🟡 Usuarios sin activar</h3>
+      <div style="text-align:center; padding: 12px 0;">
+        <div style="font-size:3rem; font-weight:900; color:#F59E0B;">12.734</div>
+        <div style="font-size:0.85rem; color:var(--muted); margin-top:4px;">usuarios con 0 postulaciones</div>
+        <div style="font-size:0.78rem; color:var(--text); margin-top:10px; line-height:1.5;">Representan el <strong>47.5%</strong> de la base. Una campaña de activación podría duplicar el volumen de postulaciones.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🔴 Instituciones dormidas</h3>
+      <div style="text-align:center; padding: 12px 0;">
+        <div style="font-size:3rem; font-weight:900; color:#EF4444;">156</div>
+        <div style="font-size:0.85rem; color:var(--muted); margin-top:4px;">instituciones sin ninguna publicación</div>
+        <div style="font-size:0.78rem; color:var(--text); margin-top:10px; line-height:1.5;"><strong>153 Standard</strong> y <strong>3 Gold</strong>. Las Gold dormidas son oportunidad de reactivación urgente.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🟢 Momento pico validado</h3>
+      <div style="text-align:center; padding: 12px 0;">
+        <div style="font-size:1.6rem; font-weight:900; color:#22C55E;">Feb 2026</div>
+        <div style="font-size:0.85rem; color:var(--muted); margin-top:4px;">10.287 postulaciones en 1 mes</div>
+        <div style="font-size:0.78rem; color:var(--text); margin-top:10px; line-height:1.5;">Coincide con inicio de ciclo lectivo. El pico valida que la plataforma tiene <strong>demanda estacional clara</strong> para anticipar campañas.</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="footer">
+  Generado con Claude · Datos: Pickapply al 19/05/2026 · 3 fuentes cruzadas (26.813 usuarios, 1.633 publicaciones, 500 instituciones)
+</div>
+
+<script>
+const palette = ['#5B4FE9','#FF6B6B','#FFB347','#4ECDC4','#45B7D1','#A89FF5','#22C55E','#F59E0B','#EC4899','#6366F1'];
+
+// 1. Segmentación usuarios
+new Chart(document.getElementById('chartSegUsers'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Sin postulaciones (0)', '1–2', '3–10', '11–50', '50+'],
+    datasets: [{
+      data: [12734, 7695, 5077, 1243, 64],
+      backgroundColor: ['#EEF0FF','#A89FF5','#5B4FE9','#FFB347','#FF6B6B'],
+      borderWidth: 2, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 14, padding: 10 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString('es-AR')} usuarios (${(ctx.parsed/26813*100).toFixed(1)}%)` } }
+    }
+  }
+});
+
+// 2. Registros por mes
+new Chart(document.getElementById('chartRegMes'), {
+  type: 'bar',
+  data: {
+    labels: ['Dic 24','Ene 25','Feb 25','Mar 25','Abr 25','May 25','Jun 25','Jul 25','Ago 25','Sep 25','Oct 25','Nov 25','Dic 25','Ene 26','Feb 26','Mar 26','Abr 26','May 26'],
+    datasets: [{
+      label: 'Nuevos usuarios',
+      data: [584,663,1781,838,772,617,639,670,1304,1126,736,507,885,1251,3436,1398,867,536],
+      backgroundColor: ctx => {
+        const v = ctx.raw;
+        if (v >= 3000) return '#FF6B6B';
+        if (v >= 1200) return '#FFB347';
+        return '#A89FF5';
+      },
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+      y: { ticks: { font: { size: 10 } } }
+    }
+  }
+});
+
+// 3. Publicaciones y postulaciones por mes (dual axis)
+new Chart(document.getElementById('chartPubMes'), {
+  type: 'bar',
+  data: {
+    labels: ['Dic 24','Ene 25','Feb 25','Mar 25','Abr 25','May 25','Jun 25','Jul 25','Ago 25','Sep 25','Oct 25','Nov 25','Dic 25','Ene 26','Feb 26','Mar 26','Abr 26','May 26'],
+    datasets: [
+      {
+        label: 'Postulaciones',
+        data: [1102,933,3218,1457,1827,1550,2126,2137,3290,3717,2615,1873,3616,3618,10287,4391,2828,1640],
+        backgroundColor: 'rgba(91,79,233,0.15)',
+        borderColor: '#5B4FE9',
+        borderWidth: 2,
+        type: 'line',
+        yAxisID: 'y1',
+        tension: 0.3,
+        pointRadius: 3,
+        fill: true
+      },
+      {
+        label: 'Publicaciones',
+        data: [43,23,90,57,51,56,69,45,60,60,55,46,62,41,160,91,84,41],
+        backgroundColor: '#FFB347',
+        borderRadius: 4,
+        yAxisID: 'y'
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { labels: { font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+      y: { ticks: { font: { size: 10 } }, position: 'left', title: { display: true, text: 'Publicaciones', font:{size:10} } },
+      y1: { ticks: { font: { size: 10 } }, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Postulaciones', font:{size:10} } }
+    }
+  }
+});
+
+// 4. Estado publicaciones
+new Chart(document.getElementById('chartEstado'), {
+  type: 'pie',
+  data: {
+    labels: ['Finalizada','Finaliz. pendiente','Activa','No aprobada','Proceso selección'],
+    datasets: [{
+      data: [1242, 282, 64, 26, 19],
+      backgroundColor: ['#D1D5DB','#FFB347','#22C55E','#EF4444','#6366F1'],
+      borderWidth: 2, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 14, padding: 8 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/1633*100).toFixed(1)}%)` } }
+    }
+  }
+});
+
+// 5. Categorías por postulaciones
+new Chart(document.getElementById('chartCats'), {
+  type: 'bar',
+  data: {
+    labels: ['Docente','Preceptor','Admin/Secretaría','Psico/Orientación','Inglés','Ed. Física'],
+    datasets: [{
+      label: 'Postulaciones totales',
+      data: [29067, 6889, 5922, 2951, 4539, 1637],
+      backgroundColor: ['#5B4FE9','#FF6B6B','#FFB347','#4ECDC4','#45B7D1','#A89FF5'],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { size: 10 } } },
+      y: { ticks: { font: { size: 10 } }, grid: { display: false } }
+    }
+  }
+});
+
+// 6. Geografía
+new Chart(document.getElementById('chartGeo'), {
+  type: 'bar',
+  data: {
+    labels: ['CABA','Buenos Aires','GBA Norte','GBA Sur','GBA Oeste','Neuquén','Córdoba','Río Negro','Santa Fe','Catamarca'],
+    datasets: [{
+      label: 'Instituciones',
+      data: [240,164,42,17,9,5,4,3,2,2],
+      backgroundColor: palette,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { size: 9 }, maxRotation: 30 }, grid: { display: false } },
+      y: { ticks: { font: { size: 10 } } }
+    }
+  }
+});
+</script>
+</body>
+</html>
